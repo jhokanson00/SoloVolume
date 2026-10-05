@@ -157,9 +157,15 @@ final class VolumeModel: ObservableObject {
     }
 
     private func startDiagnostics() {
-        diagnosticsTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [engine] _ in
-            let peaks = (0..<engine.inputPeakCount.pointee).map { String(format: "%.4f", engine.inputPeaks[$0]) }
-            FileHandle.standardError.write("input peaks: \(peaks) level: \(engine.level)\n".data(using: .utf8)!)
+        diagnosticsTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let peaks = (0..<self.engine.inputPeakCount.pointee).map { String(format: "%.4f", self.engine.inputPeaks[$0]) }
+                let line = "input peaks: \(peaks) level: \(self.engine.level) | keys: trusted=\(AXIsProcessTrusted()) "
+                    + "tap=\(self.keys.isRunning) engineUID=\(self.engine.runningDeviceUID ?? "nil") "
+                    + "defaultUID=\(defaultOutputDeviceUID() ?? "nil")\n"
+                FileHandle.standardError.write(line.data(using: .utf8)!)
+            }
         }
     }
 }
