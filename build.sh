@@ -41,9 +41,29 @@ case "${1:-}" in
     echo "Installed to /Applications/SoloVolume.app and launched it"
     ;;
 --dmg)
+    # Notarize with a notarytool profile (override with NOTARY_PROFILE=...), saved once via:
+    #   xcrun notarytool store-credentials pane-notary --apple-id <email> --team-id <team>
+    PROFILE=${NOTARY_PROFILE:-pane-notary}
+    # notarytool exits 0 even when Apple rejects a submission, so check the status itself.
+    notarize() {
+        local out
+        out="$(xcrun notarytool submit "$1" --keychain-profile "$PROFILE" --wait 2>&1)"
+        echo "$out"
+        grep -q "status: Accepted" <<<"$out" || { echo "Notarization of $1 failed" >&2; exit 1; }
+    }
     DMG=build/SoloVolume-$VERSION.dmg
     STAGE=build/dmg
     rm -rf "$STAGE" "$DMG"
+
+    # Notarize and staple the app itself first, so it passes Gatekeeper offline even once
+    # it's been copied out of the .dmg.
+    if [[ -n "$SIGN_ID" ]]; then
+        ditto -c -k --keepParent "$APP" build/SoloVolume.zip
+        notarize build/SoloVolume.zip
+        rm build/SoloVolume.zip
+        xcrun stapler staple "$APP"
+    fi
+
     mkdir -p "$STAGE"
     cp -R "$APP" "$STAGE/"
     ln -s /Applications "$STAGE/Applications"
@@ -51,12 +71,11 @@ case "${1:-}" in
     rm -rf "$STAGE"
     echo "Packaged $DMG"
 
-    # Notarize with a notarytool profile (override with NOTARY_PROFILE=...), saved once via:
-    #   xcrun notarytool store-credentials pane-notary --apple-id <email> --team-id <team>
     if [[ -n "$SIGN_ID" ]]; then
         codesign --force --timestamp --sign "$SIGN_ID" "$DMG"
-        xcrun notarytool submit "$DMG" --keychain-profile "${NOTARY_PROFILE:-pane-notary}" --wait
+        notarize "$DMG"
         xcrun stapler staple "$DMG"
+        spctl --assess --type open --context context:primary-signature -v "$DMG"
         echo "Notarized $DMG"
     fi
     ;;

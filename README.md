@@ -41,6 +41,53 @@ SoloVolume uses Core Audio process taps (macOS 14.2+):
 The device's own inputs are left closed, so the microphone indicator stays off. If the app
 quits, audio goes straight back to the device at **full volume**.
 
+## Privacy
+
+SoloVolume runs entirely on your Mac and never goes online: no accounts, analytics,
+tracking or update checks. It has no network code at all.
+
+**Audio.** The audio it captures goes straight back out to the device you chose, a few
+milliseconds later. It's never saved, recorded or sent anywhere, and only audio headed to
+that device is captured; other outputs are left alone. The interface's microphone inputs
+are never opened.
+
+**Keys.** The volume-key listener asks macOS only for media-key events (volume, mute and
+the like), never ordinary key presses, so SoloVolume can't see what you type. It acts on
+volume and mute, and only while the chosen device is your sound output; everything else
+passes straight through.
+
+**Permissions.** macOS asks for **System Audio Recording** (to capture and re-play the
+audio) and, for the volume keys, **Accessibility**. The only things SoloVolume stores are
+its own settings: volume, mute, device and the volume-keys switch.
+
+## Security
+
+- **Signed and notarized.** Releases are signed with Developer ID (team `DHGK36B2V9`) and
+  notarized by Apple, and both the app and the `.dmg` carry their notarization ticket.
+- **No extra capabilities.** SoloVolume runs with the hardened runtime and asks macOS for
+  no entitlements at all. Other apps can't attach to it or slip code into it, so they
+  can't borrow the permissions you've given it.
+- **Nothing else can drive it.** No URL scheme, AppleScript, Services or network ports; it
+  acts only on its menu and your volume keys. It runs no helper programs or scripts and
+  uses no third-party code, only macOS's own frameworks.
+- **Releases that can't be swapped.** Releases on this repo can't be changed once
+  published, and release tags can't be moved or deleted. Before anything is published,
+  `check-app.sh` checks the app inside the `.dmg`: signature, team, hardened runtime, no
+  entitlements, no URL scheme, Apple silicon and Intel, and notarization. Each release
+  lists its `.dmg`'s SHA-256.
+
+SoloVolume isn't sandboxed: process taps and system-wide volume keys aren't available to
+sandboxed apps. The protections above are what keep that safe.
+
+To check a download:
+
+```bash
+spctl --assess --type open --context context:primary-signature -v SoloVolume-1.0.1.dmg
+shasum -a 256 SoloVolume-1.0.1.dmg   # compare with the release notes
+```
+
+To report a security problem, see [SECURITY.md](SECURITY.md).
+
 ## Build from source
 
 Needs the Xcode Command Line Tools (`xcode-select --install`).
@@ -48,11 +95,11 @@ Needs the Xcode Command Line Tools (`xcode-select --install`).
 ```
 ./build.sh            # builds build/SoloVolume.app
 ./build.sh --install  # also copies it to /Applications and relaunches it
-./build.sh --dmg      # also packages build/SoloVolume-<version>.dmg
+./build.sh --dmg      # also packages build/SoloVolume-<version>.dmg (notarized)
 ```
 
 If a "Developer ID Application" certificate is in your keychain, the app is signed with it
-(hardened runtime), and `--dmg` also notarizes and staples the disk image using the
+(hardened runtime), and `--dmg` also notarizes and staples the app and the disk image using the
 notarytool profile `pane-notary` (override with `NOTARY_PROFILE=...`). Create one with
 `xcrun notarytool store-credentials <name> --apple-id <email> --team-id <team>`.
 
@@ -65,8 +112,13 @@ The icon is drawn by `Icon/make-icon.swift`; run `swift Icon/make-icon.swift` to
 
 ## Releasing
 
-Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Info.plist`, commit, then run
-`./release.sh`. It tags the version and publishes a GitHub Release with the .dmg attached.
+1. Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Info.plist`.
+2. Write the notes in `docs/release-notes/<version>.md`.
+3. Commit on `main`, then run `./release.sh` (`./release.sh --dry-run` stops before publishing).
+
+It refuses to run with uncommitted changes, notarizes the app and the `.dmg`, runs
+`check-app.sh` on the app inside the `.dmg`, then tags the version and publishes a GitHub
+Release with the `.dmg` and its SHA-256. Published releases are immutable.
 
 ## License
 

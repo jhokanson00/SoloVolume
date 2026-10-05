@@ -1,0 +1,48 @@
+name: Bug report
+description: Something in SoloVolume doesn't work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please don't attach recordings or screenshots that show private information.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open SoloVolume
+        2. Move the slider / press a volume key …
+        3. …
+  - type: input
+    id: app-version
+    attributes:
+      label: SoloVolume version
+      description: Finder → Applications → SoloVolume → Get Info
+      placeholder: "1.0.1 (2)"
+    validations:
+      required: true
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version
+      placeholder: "27.0 (26A428)"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Audio interface
+      placeholder: "Focusrite Scarlett Solo (3rd gen)"
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else?
+      description: Other audio apps running (SoundSource, Audio Hijack, Loopback…), or output devices you switch between.
