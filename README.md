@@ -141,6 +141,11 @@ The Sparkle private key lives only in this Mac's login keychain. Back it up
 (`.build/artifacts/sparkle/Sparkle/bin/generate_keys --account SoloVolume -x <file>`) to
 somewhere safe, such as a password manager; without it, no future update can be signed.
 
+
+## Author
+
+Made by [Jacob Hokanson](https://jlh.ca), who builds web and Mac software in Victoria, BC. More of his apps and tools are at [jlh.ca/tools](https://jlh.ca/tools).
+
 ## License
 
 MIT. Not affiliated with Focusrite or Rogue Amoeba.
