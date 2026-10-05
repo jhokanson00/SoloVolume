@@ -4,6 +4,11 @@ import SwiftUI
 struct SoloVolumeApp: App {
     @StateObject private var model = VolumeModel()
 
+    init() {
+        // Start the updater at launch so its daily check runs even if the menu is never opened.
+        _ = Updates.updater
+    }
+
     var body: some Scene {
         MenuBarExtra {
             MenuContent(model: model)
@@ -67,6 +72,7 @@ struct MenuContent: View {
             Toggle("Launch at login", isOn: $model.launchAtLogin)
 
             HStack {
+                Button("Check for Updates…") { Updates.checkForUpdates() }
                 Spacer()
                 Button("Quit SoloVolume") { model.quit() }
             }

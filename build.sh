@@ -9,27 +9,54 @@ cd "${0:A:h}"
 APP=build/SoloVolume.app
 VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Info.plist)
 
+ARCHS=(--arch arm64 --arch x86_64)
+swift build -c release $ARCHS
+BIN_DIR="$(swift build -c release $ARCHS --show-bin-path)"
+
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
+cp "$BIN_DIR/SoloVolume" "$APP/Contents/MacOS/SoloVolume"
 cp Info.plist "$APP/Contents/"
 cp Icon/AppIcon.icns "$APP/Contents/Resources/"
 
-for arch in arm64 x86_64; do
-    swiftc -O -swift-version 5 -parse-as-library \
-        -target $arch-apple-macos14.2 \
-        Sources/*.swift \
-        -o build/SoloVolume-$arch
-done
-lipo -create build/SoloVolume-arm64 build/SoloVolume-x86_64 -output "$APP/Contents/MacOS/SoloVolume"
-rm build/SoloVolume-arm64 build/SoloVolume-x86_64
+# The only library loaded through @rpath is Sparkle, from inside the app. SwiftPM also
+# adds its toolchain folder and @loader_path, which would be searched first; remove
+# everything but the app's Frameworks folder and the system's Swift libraries.
+otool -l "$APP/Contents/MacOS/SoloVolume" \
+    | awk '/cmd LC_RPATH/ { getline; getline; sub(/^ *path /, ""); sub(/ \(offset [0-9]+\)$/, ""); print }' \
+    | sort -u \
+    | while IFS= read -r rpath; do
+        case "$rpath" in
+            "@executable_path/../Frameworks" | /usr/lib/swift) ;;
+            *) install_name_tool -delete_rpath "$rpath" "$APP/Contents/MacOS/SoloVolume" ;;
+        esac
+    done
 
-# Sign with a Developer ID if one is in the keychain (override with SIGN_ID=...), else ad-hoc.
+# Sparkle (updates). SoloVolume isn't sandboxed, so Sparkle's XPC services aren't needed.
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+cp -R "$BIN_DIR/Sparkle.framework" "$SPARKLE"
+rm -rf "$SPARKLE/Versions/B/XPCServices" "$SPARKLE/XPCServices"
+
+# Sign with a Developer ID if one is in the keychain (override with SIGN_ID=...), else
+# ad-hoc. Hardened runtime always, so local builds behave like the notarized release.
 SIGN_ID=${SIGN_ID:-$(security find-identity -v -p codesigning | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')}
+SIGN=(codesign --force --options runtime)
+ENTITLEMENTS=()
 if [[ -n "$SIGN_ID" ]]; then
-    codesign --force --options runtime --timestamp --sign "$SIGN_ID" "$APP"
+    SIGN+=(--timestamp --sign "$SIGN_ID")
 else
-    codesign --force --sign - "$APP"
+    # Without a Team ID the hardened runtime refuses to load Sparkle.framework, so ad-hoc
+    # builds allow libraries signed by anyone. Never in a release: check-app.sh refuses
+    # any entitlement.
+    SIGN+=(--sign -)
+    /usr/libexec/PlistBuddy -c "Add :com.apple.security.cs.disable-library-validation bool true" build/local.entitlements >/dev/null
+    ENTITLEMENTS=(--entitlements build/local.entitlements)
 fi
+# Inside out: Sparkle's helpers, the framework, then the app.
+$SIGN "$SPARKLE/Versions/B/Autoupdate"
+$SIGN "$SPARKLE/Versions/B/Updater.app"
+$SIGN "$SPARKLE"
+$SIGN $ENTITLEMENTS "$APP"
 echo "Built $APP ($VERSION), signed by ${SIGN_ID:-ad-hoc}"
 
 case "${1:-}" in

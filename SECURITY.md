@@ -23,7 +23,8 @@ Only the latest release.
   volume and mute keys.
 - Anything another program on the same Mac could use to make SoloVolume act for it, or to
   borrow the permissions you've given it.
-- The downloads on this repo's releases and the scripts that build them.
+- Updates: the signed feed and downloads on this repo's releases, and how the app checks them.
+- The release scripts.
 
 ## How SoloVolume is protected
 

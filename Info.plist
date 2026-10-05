@@ -13,14 +13,26 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.1</string>
+	<string>1.1.0</string>
 	<key>CFBundleVersion</key>
-	<string>2</string>
+	<string>3</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.2</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>SoloVolume captures audio headed to your interface so it can play it back at the volume you choose.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Jacob Hokanson. MIT License.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://github.com/jhokanson00/SoloVolume/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>upP6tbuqf0OnNM7vkO/KJMVPCMw0IXvI3fVhrcdm3y4=</string>
+	<key>SURequireSignedFeed</key>
+	<true/>
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
 </dict>
 </plist>
