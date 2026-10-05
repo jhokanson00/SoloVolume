@@ -68,7 +68,10 @@ final class VolumeModel: ObservableObject {
         keys.onKey = { [weak self] key, fine in
             MainActor.assumeIsolated { self?.handleKey(key, fine: fine) }
         }
-        updateVolumeKeys(prompt: true)
+        // Show the system Accessibility prompt only on first launch; after that the menu's
+        // "Open Settings" button covers it, so relaunches don't nag.
+        updateVolumeKeys(prompt: !defaults.bool(forKey: "promptedAccessibility"))
+        defaults.set(true, forKey: "promptedAccessibility")
 
         if ProcessInfo.processInfo.environment["SOLOVOLUME_DIAG"] != nil { startDiagnostics() }
     }
