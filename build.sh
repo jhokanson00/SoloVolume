@@ -2,7 +2,7 @@
 # Builds SoloVolume.app (universal: Apple silicon + Intel) into ./build.
 #   ./build.sh            build only
 #   ./build.sh --install  also copy it to /Applications and relaunch it
-#   ./build.sh --dmg      also package build/SoloVolume-<version>.dmg
+#   ./build.sh --dmg      also package build/SoloVolume-<version>.dmg (notarized when Developer ID signed)
 set -euo pipefail
 cd "${0:A:h}"
 
@@ -23,8 +23,14 @@ done
 lipo -create build/SoloVolume-arm64 build/SoloVolume-x86_64 -output "$APP/Contents/MacOS/SoloVolume"
 rm build/SoloVolume-arm64 build/SoloVolume-x86_64
 
-codesign --force --sign - "$APP"
-echo "Built $APP ($VERSION)"
+# Sign with a Developer ID if one is in the keychain (override with SIGN_ID=...), else ad-hoc.
+SIGN_ID=${SIGN_ID:-$(security find-identity -v -p codesigning | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')}
+if [[ -n "$SIGN_ID" ]]; then
+    codesign --force --options runtime --timestamp --sign "$SIGN_ID" "$APP"
+else
+    codesign --force --sign - "$APP"
+fi
+echo "Built $APP ($VERSION), signed by ${SIGN_ID:-ad-hoc}"
 
 case "${1:-}" in
 --install)
@@ -44,5 +50,14 @@ case "${1:-}" in
     hdiutil create -quiet -volname "SoloVolume $VERSION" -srcfolder "$STAGE" -format UDZO "$DMG"
     rm -rf "$STAGE"
     echo "Packaged $DMG"
+
+    # Notarize with credentials saved once via:
+    #   xcrun notarytool store-credentials SoloVolume --apple-id <email> --team-id <team>
+    if [[ -n "$SIGN_ID" ]]; then
+        codesign --force --timestamp --sign "$SIGN_ID" "$DMG"
+        xcrun notarytool submit "$DMG" --keychain-profile SoloVolume --wait
+        xcrun stapler staple "$DMG"
+        echo "Notarized $DMG"
+    fi
     ;;
 esac
