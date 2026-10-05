@@ -24,8 +24,7 @@ Requires macOS 14.2 or later. Runs natively on Apple silicon and Intel.
 
 1. Download the latest `SoloVolume-x.y.dmg` from [Releases](../../releases).
 2. Open it and drag **SoloVolume** to **Applications**.
-3. Open SoloVolume. Because the app isn't notarized by Apple, macOS blocks the first launch:
-   go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway**.
+3. Open SoloVolume. It's signed and notarized, so it opens normally.
 4. Allow **System Audio Recording** when asked. Without it, audio to the device goes silent.
 5. For the volume keys, turn SoloVolume on in **System Settings → Privacy & Security →
    Accessibility** (the app's menu has a shortcut to this).
@@ -52,9 +51,13 @@ Needs the Xcode Command Line Tools (`xcode-select --install`).
 ./build.sh --dmg      # also packages build/SoloVolume-<version>.dmg
 ```
 
-The build is ad-hoc signed, so macOS may ask for the audio and Accessibility permissions
-again after a rebuild. If the volume keys stop working, remove SoloVolume from the
-Accessibility list and add it again.
+If a "Developer ID Application" certificate is in your keychain, the app is signed with it
+(hardened runtime), and `--dmg` also notarizes and staples the disk image using the
+notarytool profile `pane-notary` (override with `NOTARY_PROFILE=...`). Create one with
+`xcrun notarytool store-credentials <name> --apple-id <email> --team-id <team>`.
+
+Without a Developer ID the build is ad-hoc signed, so macOS asks for the audio and
+Accessibility permissions again after every rebuild.
 
 Run with `SOLOVOLUME_DIAG=1` to print input levels to stderr once a second.
 

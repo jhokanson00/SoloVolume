@@ -51,11 +51,11 @@ case "${1:-}" in
     rm -rf "$STAGE"
     echo "Packaged $DMG"
 
-    # Notarize with credentials saved once via:
-    #   xcrun notarytool store-credentials SoloVolume --apple-id <email> --team-id <team>
+    # Notarize with a notarytool profile (override with NOTARY_PROFILE=...), saved once via:
+    #   xcrun notarytool store-credentials pane-notary --apple-id <email> --team-id <team>
     if [[ -n "$SIGN_ID" ]]; then
         codesign --force --timestamp --sign "$SIGN_ID" "$DMG"
-        xcrun notarytool submit "$DMG" --keychain-profile SoloVolume --wait
+        xcrun notarytool submit "$DMG" --keychain-profile "${NOTARY_PROFILE:-pane-notary}" --wait
         xcrun stapler staple "$DMG"
         echo "Notarized $DMG"
     fi
